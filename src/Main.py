@@ -29,18 +29,20 @@ def main () :
 
     landscape = Landscape.Landscape(N,k,seed,p) 
     evolution = Evolution.Evolution(landscape,population_size, 1, number_of_neighbors,Archive.Archive(10,""), N) 
-    mth = ["None","N","None"]
+    mth = ["None","N","R"]
     for i in range(3): 
         print " ====================================================================="
         archive =  Archive.Archive(10,mth[i]) 
         evolution.archiving = archive
-        evolution.lamda = lamda[i]
+        #evolution.lamda = lamda[i]
+        
         history  = evolution.run(number_of_generation,mut_prob)
         maxs = [ ]
         for gen in history : 
             values = [genotype.fitness for genotype in gen]
             maxs.append(numpy.max(values))
-        plt.plot(maxs, label=r"$\lambda = $" +str(lamda[i])+str(mth[i]))
+        plt.plot(maxs, label=r"$method = $" +str(mth[i]))
+        
     
     plt.xlabel("Generation")
     plt.ylabel("Max Fitness")
@@ -48,7 +50,7 @@ def main () :
     plt.title("Novelty Vs Fitness")
     plt.legend(loc="lower right", shadow=True, fontsize='12')
     plt.show()
-
+    
 
 if __name__ == "__main__"  : 
 

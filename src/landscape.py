@@ -15,6 +15,7 @@ The landscape function is given by:
 import numpy as np 
 import random
 import math
+import pandas
 
 
 class Landscape : 
@@ -36,19 +37,28 @@ class Landscape :
                 self.k = k
                 self.seed = s 
                 self.p = p
+                self.w = []
 
                 if k > N : 
                         print "k should be greter than N. Please check your entries."
                         return 
                 np.random.seed(s)
-                self.w = np.random.random((N,2**(k+1))) 
-
+                #self.w = np.random.random((N,2**(k+1))) 
+                """
                 for i in range(N) : 
                     for j in range(2**(k+1)) : 
                         r = random.uniform(0,1)
                         if r < self.p : 
                                 self.w[i,j] = 0  
-        
+                dataFrame = pandas.DataFrame(self.w)
+                dataFrame.to_csv("../logs/w"+str(s)+".csv")
+                """
+                dataFrame = pandas.read_csv("../logs/w1000.csv")
+                for l in dataFrame.values : 
+                        self.w.append(l[1:])
+
+                self.w = np.array(self.w)
+
 
 ############################
         '''

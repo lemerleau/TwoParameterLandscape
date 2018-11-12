@@ -3,12 +3,13 @@
 import numpy
 import random
 import Genotype
+import Archive
 
 
 class Evolution : 
 
 
-
+##################
     #Generate the initial population of size N 
     '''
         This method is used to genrate a N-random genetypes as an initial population.
@@ -21,11 +22,13 @@ class Evolution :
             ======
                     The function returns a list of genotypes.
     '''
-    def __init__(self, landscape, population_size, init_depth=10) : 
+    def __init__(self, landscape, population_size, lamda , k, archiving, init_depth=10) : 
         
         self.population_size = population_size 
         self.init_depth = init_depth 
         self.landscape = landscape
+        self.lamda = lamda
+        self.k = k 
         n = 0 
         population = []
         for i in xrange(2**init_depth):
@@ -33,9 +36,10 @@ class Evolution :
             population.append(Genotype.Genotype(genotype_id,landscape.fitness(genotype_id)))
 
         self.init_pop = numpy.random.choice(population,population_size,replace=False)  
+        self.archiving = archiving 
 
 
-
+##################
     '''
         This method is used to mutate a given genotype to form a new offspring. 
             For a given number of bit n to mutate, we select randomly n-bits and for each bit selected replace it by a random selected bit. 
@@ -50,7 +54,7 @@ class Evolution :
     def mutate(self,genotype, mut_prob) : 
         
         list_gene = []
-        for i in range(len(genotype.id)): 
+        for i in range(len(genotype.id)):  
             r = numpy.random.uniform(0,1)
             if r < mut_prob : 
                 selct = numpy.random.choice([0,1],size=1)
@@ -61,6 +65,7 @@ class Evolution :
 
         return new_genotype
 
+##################
     def mutateAll(self,population, mut_prob) : 
         
         new_pop = []
@@ -69,6 +74,7 @@ class Evolution :
 
         return new_pop 
 
+###################
 
     def reproduce(self,population, size) : 
 
@@ -88,7 +94,7 @@ class Evolution :
         
         return sorted_genotypes[:size]
         
-
+##################
     '''
         This method is used to select a fittest individual among the population for the given tournament_size.
         
@@ -113,6 +119,7 @@ class Evolution :
                 fitest = gen
         return fitest
 
+##################
     # Natural selection based on fitness proportionate method
     def fitness_proportion_selection(self,population,size) : 
 
@@ -127,7 +134,56 @@ class Evolution :
         choices = numpy.random.choice(population,size=size,p=proportion_prob)
         return choices
 
+##################
+    # Natural selection based on fitness proportionate and novelty proportion 
+    def novelty_selection(self,population,size, lamda, k) : 
 
+        sum_fitness = 0 
+        sum_novelty = 0
+        saved_novelty = [] 
+
+        for genotype in population : 
+            sum_fitness += genotype.fitness 
+            n = self.landscape.novelty(genotype, population,k)
+            sum_novelty += n 
+            saved_novelty.append(n)
+        self.archiving.archive(population, saved_novelty)
+        proportion_prob = []
+        for i in range(len(population)) : 
+            proportion_prob.append((1-lamda)*(population[i].fitness/sum_fitness) + lamda*(saved_novelty[i]/sum_novelty))
+        
+        choices = numpy.random.choice(population,size=size,p=proportion_prob)
+        return choices
+
+
+##################
+    '''
+        This method is used to cross two given genotypes to form two new offspring for the next generation.
+        
+        For two given sequences of bit, the crossover consists of selecting n-bit in genotype1 and n-bit in genotype2 
+        and exchange them to form two new genotype. 
+
+            INPUT
+            =====
+                    genotype1(Type: string) : a sequence of bit of lenth N. that represent a parent
+                    genotype2(Type: string) : a sequence of bit of lenth N. that represent a donor
+                    number_of_bit(Type: int): the default value is 1. It is the number bit to cross(to exchange)
+            OUTPUT
+            ======
+                    The function returns two new offsprings.
+    '''
+    def crossover(self, genotype1, genotype2, number_of_bit=1) : 
+        vect1 = map(str, genotype1.id)
+        vect2 = map(str, genotype2.id)
+
+        r = numpy.random.randint(0, len(vect1))
+        swap = vect1[: r]
+        vect1[:r] = vect2[:r]
+        vect2[:r] = swap 
+
+        return  Genotype.Genotype("".join(vect1), self.landscape.fitness("".join(vect1))), Genotype.Genotype("".join(vect2), self.landscape.fitness("".join(vect2))) 
+
+#####################
 
     '''
     This function is implementing the simple genetic algorithm
@@ -139,6 +195,7 @@ class Evolution :
             ======
                     The function returns a list of fittest genotypes.
     '''
+
     def run(self, number_of_generation, mut_prob) : 
     
 
@@ -150,8 +207,9 @@ class Evolution :
             print 'Generation ', i
             
             new_generation = self.reproduce(prev_population, int(self.population_size*0.1))
-            print new_generation
-            selected = self.fitness_proportion_selection (prev_population, int(self.population_size*0.9))
+            
+            selected = self.novelty_selection (numpy.insert(prev_population,len(prev_population),self.archiving.archiving), int(self.population_size*0.9),self.lamda, self.k)
+
             new_generation = numpy.insert(new_generation,len(new_generation),self.mutateAll(selected, mut_prob) )
             history.append(new_generation)
 

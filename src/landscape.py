@@ -31,18 +31,26 @@ class Landscape :
                 ======
                         The function returns a symbolic function f(x_1,...,x_N)
         '''
-        def __init__ ( self, N, k, s) :
+        def __init__ ( self, N, k, s, p) :
                 self.N = N 
                 self.k = k
                 self.seed = s 
+                self.p = p
 
                 if k > N : 
                         print "k should be greter than N. Please check your entries."
                         return 
                 np.random.seed(s)
                 self.w = np.random.random((N,2**(k+1))) 
+
+                for i in range(N) : 
+                    for j in range(2**(k+1)) : 
+                        r = random.uniform(0,1)
+                        if r < self.p : 
+                                self.w[i,j] = 0  
         
 
+############################
         '''
         This method compute the fitness landscape of a given binary sequence of genotype (x_i,...,x_N)
                 INPUT
@@ -54,22 +62,63 @@ class Landscape :
                         The function returns a float
         '''
         def fitness(self, genotype) : 
-                print len(genotype), len(self.w)
+
                 k = math.log(len(self.w[0]),2) - 1 
                 k = int(k)
                 
                 w = []
-                for i in range(len(genotype)) : 
-                        l = [x for x in range(len(genotype)) if x != i]
-                        print l
-                        choice = np.random.choice(l,k, replace=False)
+                
+                position = range(len(genotype))
+
+                for i in position : 
+                        j = 1 
+                        choice = []
+                        while j <= k  : 
+                                choice.append (position [(i+j)%len(position)])
+                                j +=1  
                         choice = np.insert(choice,0,i)
-                        print choice
+
                         b = "".join([genotype[ch] for ch in choice])
-                        print int(b,2) 
-                        print b 
+                        
                         w.append(self.w[i,int(b,2)])
+        
                 return sum(w)/len(w)    
 
+###################
 
 
+        def NKp_fitness(self, genotype) :
+                r = np.random.uniform(0,1)
+                if r < self.p : 
+                        return 0 
+                else : 
+                        return self.fitness(genotype) 
+
+
+
+###################
+
+        def novelty_metric(self, genotype1, genotype2) : 
+                
+                return abs(int(genotype1.id,2) - int(genotype2.id,2))
+
+        def novelty(self, genotype, population, k) : 
+                list_novelty_metrics = []
+
+                for ind in population : 
+                        list_novelty_metrics.append(self.hamming_distance(genotype,ind))
+
+                list_novelty_metrics = sorted(list_novelty_metrics) 
+
+                return sum(list_novelty_metrics[:k])/float(k)
+
+        
+        def hamming_distance(self, genotype1, genotype2) :
+                distance = 0
+                b1 = genotype1.id 
+                b2 = genotype2.id
+                for i in range(len(b1)) : 
+                        if b1[i] != b2[i] : 
+                                distance +=1
+                
+                return distance
